@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vite & Gourmand — Traiteur Gastronomique Bordeaux</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,900;1,400;1,600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -772,6 +773,402 @@
   /* Smooth scroll for anchor links */
   a[href^="#"] { text-decoration: none; color: inherit; }
 
+  /* ─── EMPLOYEE PANEL ─── */
+  .emp-overlay {
+    position: fixed; inset: 0; z-index: 4500;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(6px);
+    opacity: 0; pointer-events: none;
+    transition: opacity .3s;
+    display: flex; justify-content: flex-end;
+  }
+  .emp-overlay.open { opacity: 1; pointer-events: all; }
+  .emp-panel {
+    width: min(700px, 100vw);
+    background: var(--cream);
+    height: 100%;
+    display: flex; flex-direction: column;
+    transform: translateX(100%);
+    transition: transform .35s cubic-bezier(.4,0,.2,1);
+    box-shadow: -10px 0 60px rgba(0,0,0,0.2);
+  }
+  .emp-overlay.open .emp-panel { transform: translateX(0); }
+  .emp-header {
+    background: var(--charcoal);
+    padding: 1.5rem 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .emp-badge {
+    background: var(--gold); color: white;
+    font-size: .65rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    padding: .2rem .7rem; border-radius: 100px; display: inline-block; margin-bottom: .3rem;
+  }
+  .emp-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem; font-weight: 700; color: white;
+  }
+  .emp-close {
+    background: rgba(255,255,255,0.1); border: none;
+    width: 32px; height: 32px; border-radius: 50%;
+    color: white; font-size: 1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .2s;
+  }
+  .emp-close:hover { background: rgba(255,255,255,0.2); }
+  .emp-tabs {
+    display: flex; background: white;
+    border-bottom: 1px solid rgba(0,0,0,.07);
+    overflow-x: auto; flex-shrink: 0;
+  }
+  .emp-tab {
+    flex: 1; min-width: 100px;
+    padding: 1rem .5rem;
+    background: none; border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .72rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--text-light); cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: all .2s; white-space: nowrap;
+  }
+  .emp-tab.active { color: var(--burgundy); border-bottom-color: var(--burgundy); }
+  .tab-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 17px; height: 17px; border-radius: 50%;
+    background: var(--burgundy); color: white;
+    font-size: .58rem; font-weight: 700; margin-left: .3rem; vertical-align: middle;
+  }
+  .emp-body { flex: 1; padding: 1.5rem 2rem; overflow-y: auto; }
+  .emp-section { display: none; }
+  .emp-section.active { display: block; }
+  .emp-section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem; font-weight: 700; color: var(--charcoal);
+    margin-bottom: 1.2rem;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .emp-filters {
+    background: white; border: 1px solid rgba(0,0,0,.06);
+    border-radius: 4px; padding: 1rem 1.2rem;
+    display: flex; gap: .8rem; flex-wrap: wrap; align-items: flex-end;
+    margin-bottom: 1.2rem;
+  }
+  .emp-filter-group { display: flex; flex-direction: column; gap: .3rem; flex: 1; min-width: 120px; }
+  .emp-filter-group label { font-size: .65rem; text-transform: uppercase; letter-spacing: .1em; color: var(--text-light); font-weight: 500; }
+  .emp-filter-group select, .emp-filter-group input {
+    padding: .45rem .8rem; border: 1.5px solid rgba(0,0,0,.1); border-radius: 2px;
+    font-family: 'DM Sans', sans-serif; font-size: .8rem; color: var(--text);
+    background: white; outline: none; transition: border-color .2s;
+  }
+  .emp-filter-group select:focus, .emp-filter-group input:focus { border-color: var(--burgundy); }
+  .emp-order-card {
+    background: white; border-radius: 4px;
+    border: 1px solid rgba(0,0,0,.06); padding: 1.2rem; margin-bottom: 1rem;
+    transition: box-shadow .2s;
+  }
+  .emp-order-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+  .emp-order-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: .8rem; }
+  .emp-order-ref { font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; color: var(--text-light); }
+  .emp-order-name { font-weight: 600; font-size: .95rem; color: var(--charcoal); margin-top: .1rem; }
+  .emp-order-client { font-size: .78rem; color: var(--text-light); margin-top: .15rem; }
+  .emp-order-meta { font-size: .78rem; color: var(--text-light); display: flex; gap: .8rem; flex-wrap: wrap; margin-bottom: .5rem; }
+  .emp-order-actions {
+    display: flex; gap: .6rem; align-items: center; flex-wrap: wrap;
+    margin-top: .8rem; padding-top: .8rem; border-top: 1px solid rgba(0,0,0,.05);
+  }
+  .emp-status-select {
+    padding: .4rem .7rem; border: 1.5px solid rgba(0,0,0,.12); border-radius: 2px;
+    font-family: 'DM Sans', sans-serif; font-size: .75rem; color: var(--text);
+    background: white; outline: none; cursor: pointer; transition: border-color .2s; flex: 1; min-width: 170px;
+  }
+  .emp-status-select:focus { border-color: var(--burgundy); }
+  .btn-emp-update {
+    padding: .4rem 1rem; background: var(--burgundy); color: white;
+    border: none; border-radius: 2px;
+    font-size: .72rem; font-weight: 500; letter-spacing: .08em; text-transform: uppercase;
+    cursor: pointer; transition: all .2s; white-space: nowrap;
+  }
+  .btn-emp-update:hover { background: var(--burgundy-dark); }
+  .btn-emp-cancel {
+    padding: .4rem 1rem; background: none; color: #e53935;
+    border: 1.5px solid rgba(229,57,53,0.3); border-radius: 2px;
+    font-size: .72rem; font-weight: 500; letter-spacing: .08em; text-transform: uppercase;
+    cursor: pointer; transition: all .2s; white-space: nowrap;
+  }
+  .btn-emp-cancel:hover { background: #e53935; color: white; border-color: #e53935; }
+  /* Extended status badges */
+  .status-received        { background: rgba(100,100,100,0.1); color: #555; }
+  .status-accepted        { background: rgba(45,122,58,0.1); color: #2d7a3a; }
+  .status-preparing       { background: rgba(255,152,0,0.12); color: #e65100; }
+  .status-delivering      { background: rgba(33,150,243,0.12); color: #0d47a1; }
+  .status-awaiting_return { background: rgba(196,154,60,0.15); color: #7a5c00; }
+  .status-completed       { background: rgba(46,125,50,0.12); color: #1b5e20; }
+  /* Cancel modal */
+  .cancel-modal-content { padding: 2rem 2.5rem; }
+  .cancel-modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem; font-weight: 700; color: var(--charcoal); margin-bottom: .3rem;
+  }
+  .cancel-modal-sub { font-size: .85rem; color: var(--text-light); margin-bottom: 1.5rem; line-height: 1.5; }
+  .cancel-warn {
+    background: rgba(229,57,53,0.06); border-left: 3px solid #e53935;
+    padding: .9rem 1rem; border-radius: 0 4px 4px 0;
+    font-size: .82rem; color: #b71c1c; line-height: 1.5; margin-bottom: 1.5rem;
+  }
+  /* Employee menu cards */
+  .emp-menu-card {
+    background: white; border-radius: 4px;
+    border: 1px solid rgba(0,0,0,.06); padding: 1rem 1.2rem; margin-bottom: .7rem;
+    display: flex; align-items: center; gap: 1rem; transition: box-shadow .2s;
+  }
+  .emp-menu-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+  .emp-menu-thumb { width: 56px; height: 56px; border-radius: 4px; overflow: hidden; flex-shrink: 0; }
+  .emp-menu-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .emp-menu-info { flex: 1; min-width: 0; }
+  .emp-menu-name { font-weight: 600; font-size: .875rem; color: var(--charcoal); margin-bottom: .2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .emp-menu-meta { font-size: .75rem; color: var(--text-light); }
+  .emp-menu-actions { display: flex; gap: .4rem; flex-shrink: 0; }
+  /* Review moderation */
+  .emp-review-card {
+    background: white; border-radius: 4px;
+    border: 1px solid rgba(0,0,0,.06); padding: 1.2rem; margin-bottom: .8rem;
+    transition: box-shadow .2s;
+  }
+  .emp-review-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+  .emp-review-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: .7rem; }
+  .emp-review-author { font-weight: 600; font-size: .875rem; color: var(--charcoal); }
+  .emp-review-date { font-size: .72rem; color: var(--text-light); margin-top: .1rem; }
+  .emp-review-text { font-family: 'Cormorant Garamond', serif; font-size: 1rem; font-style: italic; color: var(--text); line-height: 1.5; margin-bottom: 1rem; }
+  .emp-review-actions { display: flex; gap: .6rem; }
+  .btn-approve {
+    padding: .35rem .9rem; background: rgba(45,122,58,0.08); color: #2d7a3a;
+    border: 1.5px solid rgba(45,122,58,0.3); border-radius: 2px;
+    font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    cursor: pointer; transition: all .2s;
+  }
+  .btn-approve:hover { background: #2d7a3a; color: white; border-color: #2d7a3a; }
+  .btn-reject {
+    padding: .35rem .9rem; background: none; color: #e53935;
+    border: 1.5px solid rgba(229,57,53,0.3); border-radius: 2px;
+    font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    cursor: pointer; transition: all .2s;
+  }
+  .btn-reject:hover { background: #e53935; color: white; border-color: #e53935; }
+  /* Hours editor */
+  .hours-row {
+    display: flex; align-items: center; gap: 1rem;
+    background: white; border-radius: 4px;
+    border: 1px solid rgba(0,0,0,.06); padding: 1rem 1.2rem; margin-bottom: .7rem;
+    flex-wrap: wrap;
+  }
+  .hours-day { font-weight: 600; font-size: .875rem; min-width: 80px; color: var(--charcoal); }
+  .hours-inputs { display: flex; gap: .5rem; align-items: center; flex: 1; flex-wrap: wrap; }
+  .hours-inputs input[type="time"] {
+    padding: .4rem .7rem; border: 1.5px solid rgba(0,0,0,.1); border-radius: 2px;
+    font-family: 'DM Sans', sans-serif; font-size: .85rem; color: var(--text);
+    background: white; outline: none; transition: border-color .2s;
+  }
+  .hours-inputs input[type="time"]:focus { border-color: var(--burgundy); }
+  .hours-inputs span { font-size: .8rem; color: var(--text-light); }
+  .hours-closed-toggle { display: flex; align-items: center; gap: .4rem; font-size: .8rem; color: var(--text-light); margin-left: auto; cursor: pointer; }
+  /* Menu edit form overlay */
+  .emp-form-overlay {
+    position: fixed; inset: 0; z-index: 5500;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem; opacity: 0; pointer-events: none; transition: opacity .3s;
+  }
+  .emp-form-overlay.open { opacity: 1; pointer-events: all; }
+  .emp-form-modal {
+    background: white; border-radius: 4px;
+    max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;
+    transform: scale(.96) translateY(20px); transition: transform .3s; padding: 2rem 2.5rem;
+  }
+  .emp-form-overlay.open .emp-form-modal { transform: scale(1) translateY(0); }
+  .emp-form-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem; font-weight: 700; color: var(--charcoal);
+    margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;
+  }
+  .emp-form-grid { display: flex; flex-direction: column; gap: 1rem; }
+  .emp-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+  /* ─── ADMIN PANEL ─── */
+  .adm-overlay {
+    position: fixed; inset: 0; z-index: 4800;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
+    opacity: 0; pointer-events: none; transition: opacity .3s;
+    display: flex; justify-content: flex-end;
+  }
+  .adm-overlay.open { opacity: 1; pointer-events: all; }
+  .adm-panel {
+    width: min(780px, 100vw); background: var(--cream); height: 100%;
+    display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform .35s cubic-bezier(.4,0,.2,1);
+    box-shadow: -10px 0 60px rgba(0,0,0,0.25);
+  }
+  .adm-overlay.open .adm-panel { transform: translateX(0); }
+  .adm-header {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a1e08 100%);
+    padding: 1.5rem 2rem; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .adm-badge {
+    background: var(--gold); color: #1a1a1a;
+    font-size: .65rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    padding: .2rem .7rem; border-radius: 100px; display: inline-block; margin-bottom: .3rem;
+  }
+  .adm-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: white; }
+  .adm-subtitle { font-size: .75rem; color: rgba(255,255,255,0.45); margin-top: .15rem; }
+  .adm-close {
+    background: rgba(255,255,255,0.08); border: none; width: 32px; height: 32px; border-radius: 50%;
+    color: white; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .2s;
+  }
+  .adm-close:hover { background: rgba(196,154,60,0.3); }
+  .adm-tabs {
+    display: flex; background: white; border-bottom: 1px solid rgba(0,0,0,.07); overflow-x: auto; flex-shrink: 0;
+  }
+  .adm-tab {
+    flex: 1; min-width: 90px; padding: 1rem .5rem; background: none; border: none;
+    font-family: 'DM Sans', sans-serif; font-size: .72rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--text-light); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .2s; white-space: nowrap;
+  }
+  .adm-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+  .adm-body { flex: 1; padding: 1.5rem 2rem; overflow-y: auto; }
+  .adm-section { display: none; }
+  .adm-section.active { display: block; }
+  .adm-section-title {
+    font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700;
+    color: var(--charcoal); margin-bottom: 1.2rem;
+  }
+  .adm-stat-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  .adm-stat-card {
+    background: white; border-radius: 4px; border: 1px solid rgba(0,0,0,.06);
+    border-left: 3px solid var(--burgundy); padding: 1.2rem; text-align: center;
+  }
+  .adm-stat-num { font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 700; color: var(--burgundy); margin-bottom: .3rem; }
+  .adm-stat-lbl { font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; color: var(--text-light); }
+  .adm-emp-card {
+    background: white; border-radius: 4px; border: 1px solid rgba(0,0,0,.06);
+    padding: 1.1rem 1.3rem; margin-bottom: .7rem;
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem; transition: box-shadow .2s;
+  }
+  .adm-emp-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+  .adm-emp-info { flex: 1; }
+  .adm-emp-name { font-weight: 600; font-size: .9rem; color: var(--charcoal); margin-bottom: .15rem; }
+  .adm-emp-email { font-size: .8rem; color: var(--text-light); }
+  .adm-emp-meta { font-size: .7rem; color: var(--text-light); margin-top: .1rem; }
+  .adm-emp-right { display: flex; flex-direction: column; align-items: flex-end; gap: .4rem; flex-shrink: 0; }
+  .adm-create-form {
+    background: white; border-radius: 4px; border: 1px solid rgba(196,154,60,0.25); padding: 1.5rem; margin-bottom: 1.5rem;
+  }
+  .adm-create-form-title { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700; color: var(--charcoal); margin-bottom: 1rem; }
+  .adm-chart-container {
+    position: relative; height: 300px; background: white; border-radius: 4px;
+    border: 1px solid rgba(0,0,0,.06); padding: 1rem; margin-top: 1rem;
+  }
+  .adm-rev-filters {
+    background: white; border: 1px solid rgba(0,0,0,.06); border-radius: 4px;
+    padding: 1.2rem 1.5rem; margin-bottom: 1.2rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;
+  }
+  .adm-rev-filters .filter-group { min-width: 140px; flex: 1; }
+  .db-badge {
+    display: inline-flex; align-items: center; gap: .4rem;
+    background: rgba(196,154,60,0.08); border: 1px solid rgba(196,154,60,0.2);
+    padding: .3rem .8rem; border-radius: 100px; font-size: .7rem; font-weight: 500;
+    color: #7a5c00; margin-bottom: 1.2rem;
+  }
+  .adm-tool-card {
+    background: white; border: 1px solid rgba(0,0,0,.06); border-radius: 4px;
+    padding: 1.2rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: .8rem; transition: box-shadow .2s;
+  }
+  .adm-tool-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+  .adm-tool-name { font-weight: 600; font-size: .9rem; margin-bottom: .2rem; }
+  .adm-tool-desc { font-size: .78rem; color: var(--text-light); }
+  .rev-table { width: 100%; border-collapse: collapse; margin-top: .8rem; font-size: .875rem; }
+  .rev-table th { text-align: left; padding: .6rem .8rem; background: var(--cream); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-light); }
+  .rev-table td { padding: .6rem .8rem; border-bottom: 1px solid rgba(0,0,0,.05); vertical-align: middle; }
+  .rev-table tr:last-child td { border-bottom: none; font-weight: 700; border-top: 2px solid rgba(0,0,0,.1); }
+
+  /* ─── USER ORDERS ─── */
+  .uo-card {
+    background: white; border-radius: 6px; border: 1px solid rgba(0,0,0,.07);
+    margin-bottom: 1rem; overflow: hidden; transition: box-shadow .2s;
+  }
+  .uo-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.09); }
+  .uo-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: .9rem 1.1rem .6rem; gap: .8rem;
+  }
+  .uo-ref { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-light); }
+  .uo-menu { font-family: 'Playfair Display', serif; font-size: .95rem; font-weight: 700; color: var(--charcoal); margin-top: .15rem; }
+  .uo-meta {
+    display: flex; flex-wrap: wrap; gap: .4rem .9rem;
+    padding: 0 1.1rem .6rem; font-size: .77rem; color: var(--text-light);
+  }
+  .uo-total {
+    padding: .5rem 1.1rem; background: var(--cream);
+    display: flex; justify-content: space-between; align-items: center; gap: .6rem;
+    font-size: .82rem;
+  }
+  .uo-total-price { font-family: 'Playfair Display', serif; font-weight: 700; color: var(--burgundy); font-size: 1rem; }
+  .uo-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .uo-btn {
+    padding: .35rem .75rem; border-radius: 2px; border: 1.5px solid rgba(0,0,0,.13);
+    background: white; cursor: pointer; font-size: .72rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; transition: background .15s, border-color .15s; color: var(--charcoal);
+  }
+  .uo-btn:hover { background: var(--cream); border-color: rgba(0,0,0,.22); }
+  .uo-btn-cancel { border-color: rgba(229,57,53,.3); color: #c62828; }
+  .uo-btn-cancel:hover { background: rgba(229,57,53,.06); }
+  .uo-btn-review { border-color: rgba(196,154,60,.4); color: #7a5c00; }
+  .uo-btn-review:hover { background: rgba(196,154,60,.07); }
+  /* Timeline */
+  .uo-timeline { padding: .7rem 1.1rem .9rem; }
+  .uo-timeline-title { font-size: .7rem; text-transform: uppercase; letter-spacing: .09em; color: var(--text-light); margin-bottom: .7rem; }
+  .uo-tl-item { display: flex; gap: .7rem; position: relative; }
+  .uo-tl-item:not(:last-child)::before {
+    content: ''; position: absolute; left: 6px; top: 14px; width: 1px;
+    height: calc(100% - 2px); background: rgba(0,0,0,.1);
+  }
+  .uo-tl-dot {
+    width: 13px; height: 13px; border-radius: 50%; background: var(--cream);
+    border: 2px solid rgba(0,0,0,.18); flex-shrink: 0; margin-top: 3px; position: relative; z-index: 1;
+  }
+  .uo-tl-dot.active { background: var(--burgundy); border-color: var(--burgundy); }
+  .uo-tl-body { flex: 1; padding-bottom: .7rem; }
+  .uo-tl-label { font-size: .8rem; font-weight: 600; color: var(--charcoal); }
+  .uo-tl-date { font-size: .72rem; color: var(--text-light); margin-top: .1rem; }
+  /* Star rating */
+  .star-rating { display: flex; gap: .2rem; }
+  .star-rating .star {
+    font-size: 1.4rem; cursor: pointer; color: #ccc;
+    transition: color .1s, transform .1s;
+  }
+  .star-rating .star:hover,
+  .star-rating .star.selected { color: var(--gold); }
+  .star-rating .star:hover { transform: scale(1.2); }
+  .star-display { display: flex; gap: .15rem; }
+  .star-display .star { font-size: .95rem; color: var(--gold); cursor: default; }
+  .star-display .star.empty { color: #ddd; }
+  /* Edit / Review modals */
+  .uo-modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55);
+    z-index: 3500; align-items: center; justify-content: center; padding: 1rem;
+  }
+  .uo-modal-overlay.open { display: flex; }
+  .uo-modal {
+    background: white; border-radius: 8px; width: 100%; max-width: 520px;
+    max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  }
+  .uo-modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1.2rem 1.4rem; border-bottom: 1px solid rgba(0,0,0,.07);
+  }
+  .uo-modal-title { font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 700; color: var(--charcoal); }
+  .uo-modal-close { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: var(--text-light); padding: .2rem; }
+  .uo-modal-body { padding: 1.4rem; }
+  .uo-modal-footer { padding: .9rem 1.4rem 1.2rem; display: flex; gap: .7rem; justify-content: flex-end; border-top: 1px solid rgba(0,0,0,.06); }
+
   /* ─── MENTIONS LÉGALES ─── */
   .mentions-section {
     margin-bottom: 2rem;
@@ -1062,6 +1459,8 @@
     <button class="btn-nav btn-outline" id="navConnexion" onclick="showLogin('login')">Connexion</button>
     <button class="btn-nav btn-solid" id="navInscrire" onclick="showLogin('register')">S'inscrire</button>
     <button class="btn-nav btn-solid" id="navUser" style="display:none;gap:.4rem;align-items:center" onclick="openDashboard()">👤 <span id="navUserName"></span></button>
+    <button class="btn-nav btn-solid" id="navEmployee" style="display:none;gap:.4rem;align-items:center;background:var(--charcoal)" onclick="openEmpPanel()">⚙️ Gestion</button>
+    <button class="btn-nav btn-solid" id="navAdmin" style="display:none;gap:.4rem;align-items:center;background:var(--gold);color:var(--charcoal);font-weight:700" onclick="openAdmPanel()">👑 Admin</button>
     <button class="cart-btn" onclick="toggleCart()">
       <svg viewBox="0 0 24 24" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
       <span class="cart-count" id="cartCount">0</span>
@@ -1557,7 +1956,7 @@
 
       <div class="mentions-section">
         <h3 class="mentions-h3">🖥️ 2. Hébergeur du site</h3>
-        <p class="mentions-text"><strong>Nom :</strong> Render<br><strong>Site web :</strong> www.render.com</p>
+        <p class="mentions-text"><strong>Nom :</strong> Netlify<br><strong>Site web :</strong> https://app.netlify.com</p>
       </div>
 
       <div class="mentions-section">
@@ -1744,6 +2143,78 @@
           <button onclick="backToDelivery()" style="background:none;border:none;color:var(--text-light);cursor:pointer;font-size:.85rem;text-align:center">← Retour à la livraison</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ORDER EDIT MODAL -->
+<div class="uo-modal-overlay" id="uoEditOverlay" onclick="if(event.target===this)closeUoEdit()">
+  <div class="uo-modal">
+    <div class="uo-modal-header">
+      <div class="uo-modal-title">✏️ Modifier la commande</div>
+      <button class="uo-modal-close" onclick="closeUoEdit()">✕</button>
+    </div>
+    <div class="uo-modal-body">
+      <p style="font-size:.8rem;color:var(--text-light);margin-bottom:1.2rem">Tous les champs sont modifiables, sauf le menu.</p>
+      <input type="hidden" id="uoEditId">
+      <div class="profile-grid">
+        <div class="form-group">
+          <label>Menu (non modifiable)</label>
+          <input type="text" id="uoEditMenu" disabled style="background:var(--cream);color:var(--text-light)">
+        </div>
+        <div class="form-group">
+          <label>Nombre de personnes</label>
+          <input type="number" id="uoEditPersons" min="1" max="500">
+        </div>
+        <div class="form-group">
+          <label>Date de l'événement</label>
+          <input type="date" id="uoEditEvent">
+        </div>
+        <div class="form-group">
+          <label>Lieu de l'événement</label>
+          <input type="text" id="uoEditVenue" placeholder="Adresse de l'événement">
+        </div>
+        <div class="form-group profile-full">
+          <label>Allergies / Notes</label>
+          <textarea id="uoEditNotes" placeholder="Précisions allergies, options…" style="min-height:70px;resize:vertical"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="uo-modal-footer">
+      <button class="uo-btn" onclick="closeUoEdit()">Annuler</button>
+      <button class="dash-save-btn" style="margin-top:0" onclick="saveUoEdit()">✓ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ORDER REVIEW MODAL -->
+<div class="uo-modal-overlay" id="uoReviewOverlay" onclick="if(event.target===this)closeUoReview()">
+  <div class="uo-modal">
+    <div class="uo-modal-header">
+      <div class="uo-modal-title">⭐ Donner mon avis</div>
+      <button class="uo-modal-close" onclick="closeUoReview()">✕</button>
+    </div>
+    <div class="uo-modal-body">
+      <input type="hidden" id="uoReviewId">
+      <div id="uoReviewExisting" style="display:none;background:var(--cream);border-radius:4px;padding:1rem;margin-bottom:1rem;font-size:.85rem"></div>
+      <div class="form-group" style="margin-bottom:1.2rem">
+        <label style="margin-bottom:.6rem;display:block">Note (1–5 étoiles)</label>
+        <div class="star-rating" id="uoStarRating">
+          <span class="star" data-v="1" onclick="selectStar(1)">★</span>
+          <span class="star" data-v="2" onclick="selectStar(2)">★</span>
+          <span class="star" data-v="3" onclick="selectStar(3)">★</span>
+          <span class="star" data-v="4" onclick="selectStar(4)">★</span>
+          <span class="star" data-v="5" onclick="selectStar(5)">★</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Commentaire</label>
+        <textarea id="uoReviewComment" placeholder="Partagez votre expérience…" style="min-height:90px;resize:vertical"></textarea>
+      </div>
+    </div>
+    <div class="uo-modal-footer">
+      <button class="uo-btn" onclick="closeUoReview()">Annuler</button>
+      <button class="dash-save-btn" style="margin-top:0" onclick="saveUoReview()">✓ Envoyer mon avis</button>
     </div>
   </div>
 </div>
@@ -2052,8 +2523,272 @@
   </div>
 </div>
 
+<!-- ADMIN PANEL -->
+<div class="adm-overlay" id="admOverlay" onclick="closeAdmOutside(event)">
+  <div class="adm-panel" onclick="event.stopPropagation()">
+    <div class="adm-header">
+      <div>
+        <div class="adm-badge">Administrateur</div>
+        <div class="adm-title">José Lebon</div>
+        <div class="adm-subtitle">Vite &amp; Gourmand · Bordeaux</div>
+      </div>
+      <button class="adm-close" onclick="closeAdmPanel()">✕</button>
+    </div>
+    <div class="adm-tabs">
+      <button class="adm-tab active" onclick="switchAdmTab('employees',this)">👥 Employés</button>
+      <button class="adm-tab" onclick="switchAdmTab('stats',this)">📊 Statistiques</button>
+      <button class="adm-tab" onclick="switchAdmTab('revenue',this)">💶 Chiffre d'affaires</button>
+      <button class="adm-tab" onclick="switchAdmTab('tools',this)">⚙️ Gestion</button>
+    </div>
+    <div class="adm-body">
+
+      <!-- ─ EMPLOYÉS ─ -->
+      <div class="adm-section active" id="adm-employees">
+        <div class="adm-section-title">👥 Gestion des comptes employés</div>
+
+        <div class="adm-create-form">
+          <div class="adm-create-form-title">Créer un compte employé</div>
+          <div style="display:flex;flex-direction:column;gap:.9rem">
+            <div class="emp-form-row">
+              <div class="form-group"><label>Nom complet <span style="color:#e53935">*</span></label><input type="text" id="newEmpName" placeholder="Prénom Nom"></div>
+              <div class="form-group"><label>Email (identifiant) <span style="color:#e53935">*</span></label><input type="email" id="newEmpEmail" placeholder="employe@vg.fr"></div>
+            </div>
+            <div class="form-group">
+              <label>Mot de passe temporaire <span style="color:#e53935">*</span></label>
+              <input type="password" id="newEmpPassword" placeholder="À communiquer en main propre à l'employé">
+            </div>
+            <div style="background:rgba(196,154,60,0.08);border-left:3px solid var(--gold);padding:.85rem 1rem;border-radius:0 4px 4px 0;font-size:.8rem;color:#7a5c00;line-height:1.6">
+              ℹ️ L'employé recevra un email lui notifiant la création de son compte. <strong>Le mot de passe ne sera pas communiqué dans l'email</strong> — il devra se rapprocher de l'administrateur pour l'obtenir.
+            </div>
+            <button class="btn-emp-update" style="align-self:flex-start;padding:.7rem 1.8rem" onclick="createEmployeeAccount()">✓ Créer le compte</button>
+          </div>
+        </div>
+
+        <div style="font-family:'Playfair Display',serif;font-size:.95rem;font-weight:700;color:var(--charcoal);margin-bottom:.8rem">Comptes existants</div>
+        <div id="admEmployeesList"></div>
+      </div>
+
+      <!-- ─ STATISTIQUES ─ -->
+      <div class="adm-section" id="adm-stats">
+        <div class="adm-section-title">📊 Statistiques des commandes</div>
+        <div class="db-badge">🗄 Source : Base non-relationnelle (NoSQL)</div>
+        <div class="adm-stat-cards" id="admStatCards"></div>
+        <div class="adm-chart-container">
+          <canvas id="ordersChart"></canvas>
+        </div>
+      </div>
+
+      <!-- ─ CHIFFRE D'AFFAIRES ─ -->
+      <div class="adm-section" id="adm-revenue">
+        <div class="adm-section-title">💶 Chiffre d'affaires par menu</div>
+        <div class="db-badge">🗄 Source : Base non-relationnelle (NoSQL)</div>
+        <div class="adm-rev-filters">
+          <div class="filter-group">
+            <label>Menu</label>
+            <select id="revFilterMenu" onchange="calcRevenue()">
+              <option value="">Tous les menus</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Date événement — début</label>
+            <input type="date" id="revDateStart" onchange="calcRevenue()">
+          </div>
+          <div class="filter-group">
+            <label>Date événement — fin</label>
+            <input type="date" id="revDateEnd" onchange="calcRevenue()">
+          </div>
+          <button class="btn-reset" onclick="resetRevFilters()">⟳ Réinitialiser</button>
+        </div>
+        <div id="revTable"></div>
+        <div class="adm-chart-container" style="height:280px;margin-top:1.5rem">
+          <canvas id="revenueChart"></canvas>
+        </div>
+      </div>
+
+      <!-- ─ OUTILS GESTION (EMPLOYEE SPACE) ─ -->
+      <div class="adm-section" id="adm-tools">
+        <div class="adm-section-title">⚙️ Outils de gestion employé</div>
+        <p style="font-size:.875rem;color:var(--text-light);line-height:1.6;margin-bottom:1.5rem">En tant qu'administrateur, vous avez accès à l'intégralité des outils de l'espace employé.</p>
+        <div class="adm-tool-card">
+          <div><div class="adm-tool-name">📋 Gestion des commandes</div><div class="adm-tool-desc">Mettre à jour les statuts, filtrer, annuler avec motif</div></div>
+          <button class="btn-emp-update" onclick="openEmpSection('orders')">Accéder →</button>
+        </div>
+        <div class="adm-tool-card">
+          <div><div class="adm-tool-name">🍽 Gestion des menus</div><div class="adm-tool-desc">Créer, modifier, supprimer des menus</div></div>
+          <button class="btn-emp-update" onclick="openEmpSection('menus')">Accéder →</button>
+        </div>
+        <div class="adm-tool-card">
+          <div><div class="adm-tool-name">⭐ Modération des avis</div><div class="adm-tool-desc">Approuver ou refuser les avis clients</div></div>
+          <button class="btn-emp-update" onclick="openEmpSection('reviews')">Accéder →</button>
+        </div>
+        <div class="adm-tool-card">
+          <div><div class="adm-tool-name">🕐 Gestion des horaires</div><div class="adm-tool-desc">Modifier les plages horaires d'ouverture</div></div>
+          <button class="btn-emp-update" onclick="openEmpSection('hours')">Accéder →</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- EMPLOYEE PANEL -->
+<div class="emp-overlay" id="empOverlay" onclick="closeEmpOutside(event)">
+  <div class="emp-panel" onclick="event.stopPropagation()">
+    <div class="emp-header">
+      <div>
+        <div class="emp-badge">Employé</div>
+        <div class="emp-title">Espace de gestion</div>
+      </div>
+      <button class="emp-close" onclick="closeEmpPanel()">✕</button>
+    </div>
+    <div class="emp-tabs">
+      <button class="emp-tab active" onclick="switchEmpTab('orders',this)">📋 Commandes <span class="tab-badge" id="empOrdersBadge" style="display:none"></span></button>
+      <button class="emp-tab" onclick="switchEmpTab('menus',this)">🍽 Menus</button>
+      <button class="emp-tab" onclick="switchEmpTab('reviews',this)">⭐ Avis <span class="tab-badge" id="empReviewsBadge" style="display:none"></span></button>
+      <button class="emp-tab" onclick="switchEmpTab('hours',this)">🕐 Horaires</button>
+    </div>
+    <div class="emp-body">
+
+      <!-- ─ COMMANDES ─ -->
+      <div class="emp-section active" id="emp-orders">
+        <div class="emp-section-title"><span>📋 Gestion des commandes</span></div>
+        <div class="emp-filters">
+          <div class="emp-filter-group">
+            <label>Statut</label>
+            <select id="empFilterStatus" onchange="renderEmpOrders()">
+              <option value="">Tous les statuts</option>
+              <option value="received">Reçue</option>
+              <option value="accepted">Acceptée</option>
+              <option value="preparing">En préparation</option>
+              <option value="delivering">En cours de livraison</option>
+              <option value="delivered">Livrée</option>
+              <option value="awaiting_return">Attente retour matériel</option>
+              <option value="completed">Terminée</option>
+              <option value="cancelled">Annulée</option>
+            </select>
+          </div>
+          <div class="emp-filter-group">
+            <label>Client</label>
+            <input type="text" id="empFilterClient" placeholder="Nom ou email..." oninput="renderEmpOrders()">
+          </div>
+          <div class="emp-filter-group">
+            <label>Menu</label>
+            <input type="text" id="empFilterMenu" placeholder="Nom du menu..." oninput="renderEmpOrders()">
+          </div>
+        </div>
+        <div id="empOrdersList"></div>
+      </div>
+
+      <!-- ─ MENUS ─ -->
+      <div class="emp-section" id="emp-menus">
+        <div class="emp-section-title">
+          <span>🍽 Gestion des menus</span>
+          <button class="btn-emp-update" onclick="openMenuForm(null)">+ Nouveau menu</button>
+        </div>
+        <div id="empMenusList"></div>
+      </div>
+
+      <!-- ─ AVIS ─ -->
+      <div class="emp-section" id="emp-reviews">
+        <div class="emp-section-title"><span>⭐ Modération des avis</span></div>
+        <div style="display:flex;gap:.6rem;margin-bottom:1.2rem;flex-wrap:wrap">
+          <button class="btn-emp-update" id="rbtn_pending" style="background:var(--cream);color:var(--burgundy);border:1.5px solid rgba(123,28,42,0.25)" onclick="renderEmpReviews('pending')">En attente</button>
+          <button class="btn-emp-update" id="rbtn_approved" style="background:var(--cream);color:#2d7a3a;border:1.5px solid rgba(45,122,58,0.25)" onclick="renderEmpReviews('approved')">Approuvés</button>
+          <button class="btn-emp-update" id="rbtn_rejected" style="background:var(--cream);color:#e53935;border:1.5px solid rgba(229,57,53,0.25)" onclick="renderEmpReviews('rejected')">Refusés</button>
+        </div>
+        <div id="empReviewsList"></div>
+      </div>
+
+      <!-- ─ HORAIRES ─ -->
+      <div class="emp-section" id="emp-hours">
+        <div class="emp-section-title"><span>🕐 Gestion des horaires</span></div>
+        <div id="empHoursList"></div>
+        <button class="dash-save-btn" style="margin-top:1rem" onclick="saveHours()">✓ Enregistrer les horaires</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- CANCEL ORDER MODAL -->
+<div class="modal-overlay" id="cancelOrderOverlay" onclick="closeCancelModalOutside(event)">
+  <div class="modal" style="max-width:500px">
+    <div class="cancel-modal-content">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.2rem">
+        <div>
+          <h2 class="cancel-modal-title">Annuler la commande</h2>
+          <p class="cancel-modal-sub" id="cancelOrderRef">Réf. —</p>
+        </div>
+        <button class="modal-close" onclick="closeCancelModal()">✕</button>
+      </div>
+      <div class="cancel-warn">
+        ⚠️ Avant d'annuler une commande, vous devez avoir contacté le client par appel GSM ou par email. Renseignez obligatoirement le mode de contact, la date et le motif d'annulation.
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        <div class="form-group">
+          <label>Mode de contact <span style="color:#e53935">*</span></label>
+          <select id="cancelContactMethod">
+            <option value="">— Sélectionner —</option>
+            <option value="gsm">📞 Appel GSM</option>
+            <option value="email">✉️ Email</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date du contact <span style="color:#e53935">*</span></label>
+          <input type="date" id="cancelContactDate">
+        </div>
+        <div class="form-group">
+          <label>Motif d'annulation <span style="color:#e53935">*</span></label>
+          <textarea id="cancelReason" placeholder="Décrivez précisément le motif d'annulation..." style="min-height:90px;resize:vertical"></textarea>
+        </div>
+        <div style="display:flex;gap:.8rem">
+          <button class="btn-emp-cancel" style="flex:1;padding:.8rem" onclick="submitCancelOrder()">Confirmer l'annulation</button>
+          <button onclick="closeCancelModal()" style="flex:1;padding:.8rem;background:none;border:1.5px solid rgba(0,0,0,.12);border-radius:2px;cursor:pointer;font-size:.8rem;font-weight:500">Retour</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MENU EDIT FORM -->
+<div class="emp-form-overlay" id="menuFormOverlay">
+  <div class="emp-form-modal">
+    <div class="emp-form-title">
+      <span id="menuFormTitle">Nouveau menu</span>
+      <button class="modal-close" onclick="closeMenuForm()">✕</button>
+    </div>
+    <div class="emp-form-grid">
+      <div class="emp-form-row">
+        <div class="form-group"><label>Nom du menu <span style="color:#e53935">*</span></label><input type="text" id="mf_name" placeholder="Menu Buffet Festif"></div>
+        <div class="form-group">
+          <label>Type <span style="color:#e53935">*</span></label>
+          <select id="mf_type">
+            <option value="classique">Classique</option>
+            <option value="vegan">Vegan</option>
+            <option value="vegetarien">Végétarien</option>
+          </select>
+        </div>
+      </div>
+      <div class="emp-form-row">
+        <div class="form-group"><label>Thème</label><input type="text" id="mf_theme" placeholder="Buffet, Noël, Cocktail..."></div>
+        <div class="form-group"><label>Prix (€/pers.) <span style="color:#e53935">*</span></label><input type="number" id="mf_price" placeholder="38" min="1" step="0.01"></div>
+      </div>
+      <div class="form-group"><label>Min. personnes <span style="color:#e53935">*</span></label><input type="number" id="mf_minPersons" placeholder="2" min="1"></div>
+      <div class="form-group"><label>Description courte <span style="color:#e53935">*</span></label><input type="text" id="mf_desc" placeholder="Description affichée sur la carte"></div>
+      <div class="form-group"><label>Description complète</label><textarea id="mf_fullDesc" placeholder="Description détaillée du menu..." style="min-height:80px;resize:vertical"></textarea></div>
+      <div class="form-group"><label>Composition (une ligne par plat)</label><textarea id="mf_composition" placeholder="Entrée&#10;Plat principal&#10;Dessert..." style="min-height:80px;resize:vertical"></textarea></div>
+      <div class="form-group"><label>Allergènes</label><input type="text" id="mf_allergens" placeholder="Gluten, Lait, Œufs"></div>
+      <div class="form-group"><label>URL de l'image</label><input type="url" id="mf_img" placeholder="https://..."></div>
+      <div style="display:flex;gap:.8rem;margin-top:.5rem">
+        <button class="btn-emp-update" style="flex:1;padding:.9rem" onclick="saveMenuForm()">✓ Enregistrer</button>
+        <button onclick="closeMenuForm()" style="flex:1;padding:.9rem;background:none;border:1.5px solid rgba(0,0,0,.12);border-radius:2px;cursor:pointer;font-size:.8rem;font-weight:500">Annuler</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ─── DATA ───
@@ -2570,10 +3305,54 @@ function closeAuthRequired(e) {
 // ─── DASHBOARD ───
 // Sample order history
 const sampleOrders = [
-  { id: 'VG-2026-001', menu: 'Menu Gastronomique', persons: 8, date: '14/02/2026', event: '14/02/2026', status: 'delivered', total: 360 },
-  { id: 'VG-2026-002', menu: 'Menu Noël Prestige', persons: 12, date: '28/01/2026', event: '31/12/2025', status: 'delivered', total: 780 },
-  { id: 'VG-2026-003', menu: 'Menu Buffet Festif', persons: 25, date: '05/02/2026', event: '22/02/2026', status: 'confirmed', total: 950 },
-  { id: 'VG-2026-004', menu: 'Menu Cocktail Prestige', persons: 30, date: '10/02/2026', event: '01/03/2026', status: 'pending', total: 1260 },
+  {
+    id: 'VG-2026-001', menu: 'Menu Gastronomique', persons: 8, date: '14/02/2026',
+    event: '14/02/2026', status: 'completed', total: 360,
+    venue: '12 rue des Fleurs, Bordeaux', notes: '',
+    history: [
+      { status: 'received',  date: '14/02/2026 09:12' },
+      { status: 'accepted',  date: '14/02/2026 10:05' },
+      { status: 'preparing', date: '14/02/2026 14:30' },
+      { status: 'delivering',date: '14/02/2026 18:00' },
+      { status: 'delivered', date: '14/02/2026 19:15' },
+      { status: 'completed', date: '14/02/2026 19:20' }
+    ],
+    review: null
+  },
+  {
+    id: 'VG-2026-002', menu: 'Menu Noël Prestige', persons: 12, date: '28/01/2026',
+    event: '31/12/2025', status: 'completed', total: 780,
+    venue: '5 avenue des Châtaigniers, Pessac', notes: 'Sans noix pour 2 convives',
+    history: [
+      { status: 'received',  date: '28/01/2026 11:00' },
+      { status: 'accepted',  date: '28/01/2026 11:45' },
+      { status: 'preparing', date: '28/01/2026 15:00' },
+      { status: 'delivering',date: '31/12/2025 17:00' },
+      { status: 'delivered', date: '31/12/2025 19:30' },
+      { status: 'awaiting_return', date: '31/12/2025 19:31' },
+      { status: 'completed', date: '08/01/2026 10:00' }
+    ],
+    review: { rating: 5, comment: 'Excellent ! Tout était parfait.', validated: true }
+  },
+  {
+    id: 'VG-2026-003', menu: 'Menu Buffet Festif', persons: 25, date: '05/02/2026',
+    event: '22/02/2026', status: 'accepted', total: 950,
+    venue: '18 cours Victor Hugo, Bordeaux', notes: '',
+    history: [
+      { status: 'received', date: '05/02/2026 08:55' },
+      { status: 'accepted', date: '05/02/2026 10:10' }
+    ],
+    review: null
+  },
+  {
+    id: 'VG-2026-004', menu: 'Menu Cocktail Prestige', persons: 30, date: '10/02/2026',
+    event: '01/03/2026', status: 'received', total: 1260,
+    venue: '47 cours de l\'Intendance, Bordeaux', notes: 'Prévoir option vegan x5',
+    history: [
+      { status: 'received', date: '10/02/2026 14:22' }
+    ],
+    review: null
+  },
 ];
 
 let userAddresses = [
@@ -2581,14 +3360,24 @@ let userAddresses = [
   { id: 2, label: 'Bureau', street: '47 cours de l\'Intendance', zip: '33000', city: 'Bordeaux', extra: '' },
 ];
 
+// ─── USER ORDER STATUS MAP ───
+const uoStatusMap = {
+  received:       { label: 'Reçue',                 cls: 'status-received' },
+  accepted:       { label: 'Acceptée',               cls: 'status-accepted' },
+  preparing:      { label: 'En préparation',         cls: 'status-preparing' },
+  delivering:     { label: 'En cours de livraison',  cls: 'status-delivering' },
+  delivered:      { label: 'Livrée',                 cls: 'status-delivered' },
+  awaiting_return:{ label: 'Retour matériel',        cls: 'status-awaiting_return' },
+  completed:      { label: 'Terminée',               cls: 'status-completed' },
+  cancelled:      { label: 'Annulée',                cls: 'status-cancelled' },
+};
+
 function openDashboard() {
   if (!isLoggedIn || !currentUser) { showLogin('login'); return; }
   const overlay = document.getElementById('dashOverlay');
-  // Populate header
   document.getElementById('dashAvatar').textContent = (currentUser.prenom || '?')[0].toUpperCase();
   document.getElementById('dashName').textContent = (currentUser.prenom || '') + ' ' + (currentUser.nom || '');
   document.getElementById('dashEmail').textContent = currentUser.email || '';
-  // Populate profile fields
   document.getElementById('prof_prenom').value = currentUser.prenom || '';
   document.getElementById('prof_nom').value = currentUser.nom || '';
   document.getElementById('prof_email').value = currentUser.email || '';
@@ -2596,10 +3385,8 @@ function openDashboard() {
   document.getElementById('prof_birth').value = currentUser.birth || '';
   document.getElementById('prof_diet').value = currentUser.diet || '';
   document.getElementById('prof_allergies').value = currentUser.allergies || '';
-  // Render orders & addresses
   renderOrders();
   renderAddresses();
-  // Switch to orders tab
   switchDashTab('orders', document.querySelector('.dash-tab'));
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -2620,52 +3407,178 @@ function switchDashTab(name, btn) {
   if (btn) btn.classList.add('active');
 }
 
-// Orders
+// ─── RENDER ORDERS ───
 function renderOrders() {
   const list = document.getElementById('ordersList');
-  const statusMap = {
-    delivered: { label: 'Livré', cls: 'status-delivered' },
-    confirmed: { label: 'Confirmé', cls: 'status-confirmed' },
-    pending:   { label: 'En attente', cls: 'status-pending' },
-    cancelled: { label: 'Annulé', cls: 'status-cancelled' },
-  };
-  if (sampleOrders.length === 0) {
+  if (!sampleOrders.length) {
     list.innerHTML = '<div class="dash-empty"><div class="icon">📦</div><p>Aucune commande pour le moment.</p></div>';
     return;
   }
   list.innerHTML = sampleOrders.map(o => {
-    const s = statusMap[o.status] || statusMap.pending;
-    return `
-      <div class="order-card">
-        <div class="order-header">
-          <div>
-            <div class="order-id">Réf. ${o.id}</div>
-            <div class="order-menu">${o.menu}</div>
+    const s = uoStatusMap[o.status] || uoStatusMap.received;
+    const canEdit   = o.status === 'received';
+    const canCancel = o.status === 'received';
+    const isAccepted = !['received','cancelled'].includes(o.status);
+    const isDone = o.status === 'completed';
+    const canReview = isDone;
+
+    // Timeline (only shown if order is accepted or beyond)
+    let timelineHtml = '';
+    if (isAccepted && o.history && o.history.length) {
+      const steps = o.history.map((h, i) => {
+        const sm = uoStatusMap[h.status] || {};
+        const isLast = i === o.history.length - 1;
+        return `<div class="uo-tl-item">
+          <div class="uo-tl-dot${isLast ? ' active' : ''}"></div>
+          <div class="uo-tl-body">
+            <div class="uo-tl-label">${sm.label || h.status}</div>
+            <div class="uo-tl-date">${h.date}</div>
           </div>
-          <span class="order-status ${s.cls}">${s.label}</span>
-        </div>
-        <div class="order-meta">
-          <span>👥 ${o.persons} personnes</span>
-          <span>📅 Événement : ${o.event}</span>
-          <span>🗓 Commandé le ${o.date}</span>
-        </div>
-        <div class="order-footer">
-          <span class="order-total">${o.total.toFixed(2).replace('.', ',')} €</span>
-          <div style="display:flex;gap:.5rem">
-            ${o.status === 'pending' ? `<button class="btn-order-action" style="border-color:rgba(229,57,53,0.3);color:#e53935" onclick="cancelOrder('${o.id}')">Annuler</button>` : ''}
-            <button class="btn-order-action" onclick="showToast('Facture ${o.id} téléchargée !')">📄 Facture</button>
-          </div>
-        </div>
+        </div>`;
+      }).join('');
+      timelineHtml = `<div class="uo-timeline">
+        <div class="uo-timeline-title">Suivi de commande</div>
+        ${steps}
       </div>`;
+    }
+
+    // Review display
+    let reviewHtml = '';
+    if (o.review) {
+      const stars = [1,2,3,4,5].map(i => `<span class="star${i > o.review.rating ? ' empty' : ''}">★</span>`).join('');
+      const badge = o.review.validated
+        ? '<span style="font-size:.7rem;padding:.15rem .5rem;border-radius:100px;background:rgba(45,122,58,.1);color:#2d7a3a;margin-left:.5rem">Publié</span>'
+        : '<span style="font-size:.7rem;padding:.15rem .5rem;border-radius:100px;background:rgba(0,0,0,.06);color:var(--text-light);margin-left:.5rem">En attente de validation</span>';
+      reviewHtml = `<div style="padding:.6rem 1.1rem .9rem;border-top:1px solid rgba(0,0,0,.05)">
+        <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-light);margin-bottom:.4rem">Mon avis${badge}</div>
+        <div class="star-display">${stars}</div>
+        <div style="font-size:.8rem;color:var(--text-light);margin-top:.35rem;font-style:italic">"${o.review.comment}"</div>
+      </div>`;
+    }
+
+    return `<div class="uo-card">
+      <div class="uo-header">
+        <div>
+          <div class="uo-ref">Réf. ${o.id}</div>
+          <div class="uo-menu">${o.menu}</div>
+        </div>
+        <span class="order-status ${s.cls}">${s.label}</span>
+      </div>
+      <div class="uo-meta">
+        <span>👥 ${o.persons} pers.</span>
+        <span>📅 Événement : ${o.event}</span>
+        <span>🗓 Commandé le ${o.date}</span>
+        ${o.venue ? `<span>📍 ${o.venue}</span>` : ''}
+        ${o.notes ? `<span>📝 ${o.notes}</span>` : ''}
+      </div>
+      <div class="uo-total">
+        <span class="uo-total-price">${o.total.toLocaleString('fr-FR', {minimumFractionDigits:2})} €</span>
+        <div class="uo-actions">
+          ${canEdit   ? `<button class="uo-btn" onclick="openUoEdit('${o.id}')">✏️ Modifier</button>` : ''}
+          ${canCancel ? `<button class="uo-btn uo-btn-cancel" onclick="cancelUoOrder('${o.id}')">✕ Annuler</button>` : ''}
+          ${canReview && !o.review ? `<button class="uo-btn uo-btn-review" onclick="openUoReview('${o.id}')">⭐ Donner mon avis</button>` : ''}
+          ${canReview && o.review  ? `<button class="uo-btn uo-btn-review" onclick="openUoReview('${o.id}')">✏️ Mon avis</button>` : ''}
+          <button class="uo-btn" onclick="showToast('Facture ${o.id} téléchargée !')">📄 Facture</button>
+        </div>
+      </div>
+      ${timelineHtml}
+      ${reviewHtml}
+    </div>`;
   }).join('');
 }
 
-function cancelOrder(id) {
+// ─── CANCEL ORDER ───
+function cancelUoOrder(id) {
   const o = sampleOrders.find(x => x.id === id);
-  if (!o) return;
+  if (!o || o.status !== 'received') { showToast('Cette commande ne peut plus être annulée.'); return; }
+  if (!confirm('Voulez-vous vraiment annuler la commande ' + id + ' ?')) return;
   o.status = 'cancelled';
+  o.history.push({ status: 'cancelled', date: new Date().toLocaleDateString('fr-FR') + ' ' + new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}) });
   renderOrders();
   showToast('Commande ' + id + ' annulée.');
+}
+
+// ─── EDIT ORDER ───
+function openUoEdit(id) {
+  const o = sampleOrders.find(x => x.id === id);
+  if (!o) return;
+  document.getElementById('uoEditId').value      = id;
+  document.getElementById('uoEditMenu').value    = o.menu;
+  document.getElementById('uoEditPersons').value = o.persons;
+  // Convert DD/MM/YYYY → YYYY-MM-DD for date input
+  const p = o.event.split('/');
+  document.getElementById('uoEditEvent').value = p.length===3 ? `${p[2]}-${p[1]}-${p[0]}` : '';
+  document.getElementById('uoEditVenue').value  = o.venue || '';
+  document.getElementById('uoEditNotes').value  = o.notes || '';
+  document.getElementById('uoEditOverlay').classList.add('open');
+}
+function closeUoEdit() {
+  document.getElementById('uoEditOverlay').classList.remove('open');
+}
+function saveUoEdit() {
+  const id = document.getElementById('uoEditId').value;
+  const o  = sampleOrders.find(x => x.id === id);
+  if (!o || o.status !== 'received') { showToast('Modification impossible.'); closeUoEdit(); return; }
+  const persons = parseInt(document.getElementById('uoEditPersons').value, 10);
+  const eventVal = document.getElementById('uoEditEvent').value;
+  if (!persons || persons < 1) { showToast('Nombre de personnes invalide.'); return; }
+  // Convert YYYY-MM-DD → DD/MM/YYYY
+  let eventStr = o.event;
+  if (eventVal) {
+    const [y,m,d] = eventVal.split('-');
+    eventStr = `${d}/${m}/${y}`;
+  }
+  o.persons = persons;
+  o.event   = eventStr;
+  o.venue   = document.getElementById('uoEditVenue').value.trim();
+  o.notes   = document.getElementById('uoEditNotes').value.trim();
+  closeUoEdit();
+  renderOrders();
+  showToast('Commande ' + id + ' mise à jour.');
+}
+
+// ─── REVIEW ───
+let _uoReviewRating = 0;
+
+function openUoReview(id) {
+  const o = sampleOrders.find(x => x.id === id);
+  if (!o) return;
+  document.getElementById('uoReviewId').value = id;
+  _uoReviewRating = o.review ? o.review.rating : 0;
+  document.getElementById('uoReviewComment').value = o.review ? o.review.comment : '';
+  const existing = document.getElementById('uoReviewExisting');
+  if (o.review) {
+    existing.style.display = 'block';
+    existing.innerHTML = '<strong>Vous avez déjà soumis un avis.</strong> Vous pouvez le modifier ci-dessous.';
+  } else {
+    existing.style.display = 'none';
+  }
+  renderStars(_uoReviewRating);
+  document.getElementById('uoReviewOverlay').classList.add('open');
+}
+function closeUoReview() {
+  document.getElementById('uoReviewOverlay').classList.remove('open');
+}
+function selectStar(v) {
+  _uoReviewRating = v;
+  renderStars(v);
+}
+function renderStars(v) {
+  document.querySelectorAll('#uoStarRating .star').forEach(s => {
+    s.classList.toggle('selected', parseInt(s.dataset.v, 10) <= v);
+  });
+}
+function saveUoReview() {
+  const id = document.getElementById('uoReviewId').value;
+  const o  = sampleOrders.find(x => x.id === id);
+  if (!o) return;
+  if (!_uoReviewRating) { showToast('Veuillez sélectionner une note.'); return; }
+  const comment = document.getElementById('uoReviewComment').value.trim();
+  if (!comment) { showToast('Veuillez écrire un commentaire.'); return; }
+  o.review = { rating: _uoReviewRating, comment, validated: false };
+  closeUoReview();
+  renderOrders();
+  showToast('Merci pour votre avis ! Il sera publié après validation.');
 }
 
 // Profile
@@ -3003,6 +3916,728 @@ function closeMentionsOutside(e) {
 window.addEventListener('scroll', () => {
   document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 40);
 });
+
+// ─── ADMIN ───
+let isAdmin = false;
+
+// Simulated NoSQL database (Firebase/Firestore-like structure)
+const noSqlDb = {
+  name: 'vg-nosql-db',
+  collections: {}
+};
+
+let employeeAccounts = (function() {
+  try { const s = localStorage.getItem('vg_employees'); return s ? JSON.parse(s) : null; } catch(e) { return null; }
+})() || [
+  { id: 'emp_001', email: 'employe@vg.fr', displayName: 'Employé VG', active: true, createdAt: '01/01/2026' }
+];
+noSqlDb.collections.employees = employeeAccounts;
+
+function saveEmployeesToDb() {
+  try { localStorage.setItem('vg_employees', JSON.stringify(employeeAccounts)); } catch(e) {}
+  noSqlDb.collections.employees = employeeAccounts;
+}
+
+// Override handleLogin — final version: admin + employee + user
+function handleLogin() {
+  const email    = document.getElementById('login_email').value.trim();
+  const password = document.getElementById('login_password').value;
+  if (!email || !password) { showToast('Veuillez remplir tous les champs.'); return; }
+
+  if (email === 'jose@vg.fr' || email === 'admin@vg.fr') {
+    isAdmin = true; isEmployee = false; isLoggedIn = true;
+    currentUser = { prenom: 'José', nom: 'Lebon', email, role: 'admin' };
+  } else {
+    const accMatch = employeeAccounts.find(e => e.email.toLowerCase() === email.toLowerCase());
+    const isEmpByEmail = email.toLowerCase().startsWith('employe') || !!accMatch;
+    if (isEmpByEmail) {
+      if (accMatch && !accMatch.active) { showToast('Ce compte employé est désactivé. Contactez l\'administrateur.'); return; }
+      isAdmin = false; isEmployee = true; isLoggedIn = true;
+      const dname = accMatch ? accMatch.displayName : 'Employé';
+      currentUser = { prenom: dname.split(' ')[0], nom: dname.split(' ').slice(1).join(' '), email, role: 'employee' };
+    } else {
+      isAdmin = false; isEmployee = false; isLoggedIn = true;
+      currentUser = { prenom: email.split('@')[0], email, role: 'user' };
+    }
+  }
+  closeLogin();
+  updateNavAuth();
+  showToast('Bienvenue ' + currentUser.prenom + ' !');
+  if (pendingAction) { pendingAction(); pendingAction = null; }
+}
+
+// Override handleLogout — resets all flags
+function handleLogout() {
+  isLoggedIn = false; isEmployee = false; isAdmin = false;
+  currentUser = null;
+  cart = [];
+  renderCart();
+  updateNavAuth();
+  closeDashboard();
+  showToast('À bientôt !');
+}
+
+// Override updateNavAuth — final version: admin + employee + user
+function updateNavAuth() {
+  const btnLogin = document.getElementById('navConnexion');
+  const btnReg   = document.getElementById('navInscrire');
+  const btnUser  = document.getElementById('navUser');
+  const btnEmp   = document.getElementById('navEmployee');
+  const btnAdm   = document.getElementById('navAdmin');
+  if (isLoggedIn && currentUser) {
+    btnLogin.style.display = 'none';
+    btnReg.style.display   = 'none';
+    if (isAdmin) {
+      btnUser.style.display = 'none';
+      if (btnEmp) btnEmp.style.display = 'none';
+      if (btnAdm) btnAdm.style.display = 'flex';
+    } else if (isEmployee) {
+      btnUser.style.display = 'none';
+      if (btnEmp) btnEmp.style.display = 'flex';
+      if (btnAdm) btnAdm.style.display = 'none';
+    } else {
+      btnUser.style.display = 'flex';
+      document.getElementById('navUserName').textContent = currentUser.prenom;
+      if (btnEmp) btnEmp.style.display = 'none';
+      if (btnAdm) btnAdm.style.display = 'none';
+    }
+  } else {
+    btnLogin.style.display = '';
+    btnReg.style.display   = '';
+    btnUser.style.display  = 'none';
+    if (btnEmp) btnEmp.style.display = 'none';
+    if (btnAdm) btnAdm.style.display = 'none';
+    isAdmin = false; isEmployee = false;
+  }
+}
+
+// ─── ADMIN PANEL ───
+function openAdmPanel() {
+  renderAdmEmployees();
+  document.getElementById('admOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeAdmPanel() {
+  document.getElementById('admOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function closeAdmOutside(e) {
+  if (e.target === document.getElementById('admOverlay')) closeAdmPanel();
+}
+function switchAdmTab(name, btn) {
+  document.querySelectorAll('.adm-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.adm-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('adm-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (name === 'stats')   { renderAdmStats(); }
+  if (name === 'revenue') { renderAdmRevenue(); }
+}
+
+// Helper to open employee panel on a specific tab from admin
+function openEmpSection(section) {
+  closeAdmPanel();
+  setTimeout(() => {
+    openEmpPanel();
+    const tabs = document.querySelectorAll('.emp-tab');
+    const idx = ['orders','menus','reviews','hours'].indexOf(section);
+    switchEmpTab(section, idx >= 0 ? tabs[idx] : null);
+  }, 380);
+}
+
+// ─── EMPLOYEE ACCOUNTS ───
+function renderAdmEmployees() {
+  const list = document.getElementById('admEmployeesList');
+  if (!employeeAccounts.length) {
+    list.innerHTML = '<div class="dash-empty"><div class="icon">👥</div><p>Aucun compte employé.</p></div>';
+    return;
+  }
+  list.innerHTML = employeeAccounts.map(e => `
+    <div class="adm-emp-card">
+      <div class="adm-emp-info">
+        <div class="adm-emp-name">${e.displayName}</div>
+        <div class="adm-emp-email">${e.email}</div>
+        <div class="adm-emp-meta">Créé le ${e.createdAt}</div>
+      </div>
+      <div class="adm-emp-right">
+        <span class="order-status ${e.active ? 'status-accepted' : 'status-cancelled'}">${e.active ? 'Actif' : 'Désactivé'}</span>
+        <button class="${e.active ? 'btn-emp-cancel' : 'btn-emp-update'}" style="padding:.3rem .85rem;font-size:.7rem" onclick="toggleEmployeeAccount('${e.id}')">
+          ${e.active ? '🔒 Désactiver' : '🔓 Réactiver'}
+        </button>
+      </div>
+    </div>`).join('');
+}
+
+function createEmployeeAccount() {
+  const email    = document.getElementById('newEmpEmail').value.trim();
+  const name     = document.getElementById('newEmpName').value.trim();
+  const password = document.getElementById('newEmpPassword').value;
+  if (!email || !name || !password) { showToast('Veuillez remplir tous les champs.'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('Adresse email invalide.'); return; }
+  if (employeeAccounts.some(e => e.email.toLowerCase() === email.toLowerCase())) {
+    showToast('Un compte avec cet email existe déjà.'); return;
+  }
+  employeeAccounts.push({
+    id: 'emp_' + Date.now(), email, displayName: name,
+    active: true, createdAt: new Date().toLocaleDateString('fr-FR')
+  });
+  saveEmployeesToDb();
+  document.getElementById('newEmpEmail').value    = '';
+  document.getElementById('newEmpName').value     = '';
+  document.getElementById('newEmpPassword').value = '';
+  renderAdmEmployees();
+  showToast('✉️ Compte créé · Notification envoyée à ' + email + ' (mot de passe non communiqué).');
+}
+
+function toggleEmployeeAccount(id) {
+  const emp = employeeAccounts.find(e => e.id === id);
+  if (!emp) return;
+  emp.active = !emp.active;
+  saveEmployeesToDb();
+  renderAdmEmployees();
+  showToast('Compte ' + emp.email + (emp.active ? ' réactivé.' : ' désactivé.'));
+}
+
+// ─── STATISTICS ───
+let ordersChartInst   = null;
+let revenueChartInst  = null;
+
+function getOrdersGrouped(src) {
+  src = src || allOrders;
+  const g = {};
+  src.forEach(o => {
+    if (!g[o.menu]) g[o.menu] = { count: 0, revenue: 0 };
+    g[o.menu].count++;
+    g[o.menu].revenue += o.total;
+  });
+  return g;
+}
+
+function renderAdmStats() {
+  const g = getOrdersGrouped();
+  const labels   = Object.keys(g);
+  const counts   = labels.map(l => g[l].count);
+  const revenues = labels.map(l => g[l].revenue);
+  const totalOrders  = allOrders.length;
+  const totalRevenue = allOrders.reduce((s, o) => s + o.total, 0);
+
+  document.getElementById('admStatCards').innerHTML = `
+    <div class="adm-stat-card">
+      <div class="adm-stat-num">${totalOrders}</div>
+      <div class="adm-stat-lbl">Commandes totales</div>
+    </div>
+    <div class="adm-stat-card" style="border-left-color:var(--gold)">
+      <div class="adm-stat-num" style="color:var(--gold)">${totalRevenue.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</div>
+      <div class="adm-stat-lbl">Chiffre d'affaires total</div>
+    </div>
+    <div class="adm-stat-card" style="border-left-color:#2d7a3a">
+      <div class="adm-stat-num" style="color:#2d7a3a">${menus.length}</div>
+      <div class="adm-stat-lbl">Menus actifs</div>
+    </div>`;
+
+  const ctx = document.getElementById('ordersChart').getContext('2d');
+  if (ordersChartInst) { ordersChartInst.destroy(); ordersChartInst = null; }
+  ordersChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels.map(l => l.length > 22 ? l.slice(0,20) + '…' : l),
+      datasets: [
+        { label: 'Nb commandes', data: counts, backgroundColor: 'rgba(123,28,42,0.75)', borderColor: 'rgba(123,28,42,1)', borderWidth: 1, borderRadius: 4, yAxisID: 'y' },
+        { label: 'CA (€)',       data: revenues, backgroundColor: 'rgba(196,154,60,0.6)', borderColor: 'rgba(196,154,60,1)', borderWidth: 1, borderRadius: 4, yAxisID: 'y1' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { family: 'DM Sans', size: 11 } } },
+        title:  { display: true, text: 'Commandes & CA par menu', font: { family: 'Playfair Display', size: 13, weight: '700' } }
+      },
+      scales: {
+        y:  { type: 'linear', position: 'left',  title: { display: true, text: 'Nb commandes' }, ticks: { stepSize: 1 }, beginAtZero: true },
+        y1: { type: 'linear', position: 'right', title: { display: true, text: 'CA (€)' }, grid: { drawOnChartArea: false }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+// ─── REVENUE (CA) ───
+function parseEventDate(str) {
+  if (!str) return null;
+  const p = str.split('/');
+  return p.length === 3 ? new Date(+p[2], +p[1]-1, +p[0]) : null;
+}
+
+function renderAdmRevenue() {
+  const sel = document.getElementById('revFilterMenu');
+  if (sel) {
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Tous les menus</option>' +
+      [...new Set(allOrders.map(o => o.menu))].map(m => `<option value="${m}"${m===cur?' selected':''}>${m}</option>`).join('');
+  }
+  calcRevenue();
+}
+
+function calcRevenue() {
+  const menuF  = document.getElementById('revFilterMenu')?.value  || '';
+  const dateS  = document.getElementById('revDateStart')?.value   || '';
+  const dateE  = document.getElementById('revDateEnd')?.value     || '';
+  const startD = dateS ? new Date(dateS) : null;
+  const endD   = dateE ? new Date(dateE) : null;
+
+  const filtered = allOrders.filter(o => {
+    if (menuF && o.menu !== menuF) return false;
+    const d = parseEventDate(o.event);
+    if (startD && d && d < startD) return false;
+    if (endD   && d && d > endD  ) return false;
+    return true;
+  });
+
+  const g = getOrdersGrouped(filtered);
+  const labels  = Object.keys(g);
+  const totalCA = filtered.reduce((s, o) => s + o.total, 0);
+
+  document.getElementById('revTable').innerHTML = labels.length ? `
+    <table class="rev-table">
+      <thead><tr><th>Menu</th><th>Commandes</th><th>CA (€)</th><th>% du total</th></tr></thead>
+      <tbody>
+        ${labels.map(l => `
+          <tr>
+            <td>${l}</td>
+            <td>${g[l].count}</td>
+            <td style="font-family:'Playfair Display',serif;font-weight:700;color:var(--burgundy)">${g[l].revenue.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td>
+            <td>${totalCA > 0 ? ((g[l].revenue/totalCA)*100).toFixed(1) + ' %' : '—'}</td>
+          </tr>`).join('')}
+        <tr>
+          <td>TOTAL</td>
+          <td>${filtered.length}</td>
+          <td style="font-family:'Playfair Display',serif;color:var(--burgundy)">${totalCA.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td>
+          <td>100 %</td>
+        </tr>
+      </tbody>
+    </table>` : '<div class="dash-empty" style="padding:2rem 1rem"><div class="icon">💶</div><p>Aucune commande pour ces critères.</p></div>';
+
+  const ctx2 = document.getElementById('revenueChart').getContext('2d');
+  if (revenueChartInst) { revenueChartInst.destroy(); revenueChartInst = null; }
+  if (labels.length) {
+    const palette = ['#7B1C2A','#C49A3C','#2d7a3a','#0d47a1','#e65100','#4a148c','#00695c','#558b2f'];
+    revenueChartInst = new Chart(ctx2, {
+      type: 'doughnut',
+      data: {
+        labels: labels.map(l => l.length > 22 ? l.slice(0,20)+'…' : l),
+        datasets: [{ data: labels.map(l => g[l].revenue), backgroundColor: labels.map((_,i) => palette[i % palette.length]), borderWidth: 2, borderColor: '#fff' }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { font: { family: 'DM Sans', size: 11 }, boxWidth: 12, padding: 10 } },
+          title:  { display: true, text: 'Répartition du CA par menu', font: { family: 'Playfair Display', size: 13, weight: '700' } },
+          tooltip: { callbacks: { label: c => ' ' + c.label + ' : ' + c.parsed.toLocaleString('fr-FR',{minimumFractionDigits:2}) + ' €' } }
+        }
+      }
+    });
+  }
+}
+
+function resetRevFilters() {
+  const s = document.getElementById('revDateStart');
+  const e = document.getElementById('revDateEnd');
+  const m = document.getElementById('revFilterMenu');
+  if (s) s.value = '';
+  if (e) e.value = '';
+  if (m) m.value = '';
+  calcRevenue();
+}
+let _cancelOrderId = null;
+let _editingMenuId = null;
+
+const empStatusMap = {
+  received:        { label: 'Reçue',                   cls: 'status-received' },
+  accepted:        { label: 'Acceptée',                 cls: 'status-accepted' },
+  preparing:       { label: 'En préparation',           cls: 'status-preparing' },
+  delivering:      { label: 'En cours de livraison',    cls: 'status-delivering' },
+  delivered:       { label: 'Livrée',                   cls: 'status-delivered' },
+  awaiting_return: { label: 'Attente retour matériel',  cls: 'status-awaiting_return' },
+  completed:       { label: 'Terminée',                 cls: 'status-completed' },
+  cancelled:       { label: 'Annulée',                  cls: 'status-cancelled' },
+};
+
+const nextStatuses = {
+  received:        ['accepted'],
+  accepted:        ['preparing'],
+  preparing:       ['delivering'],
+  delivering:      ['delivered'],
+  delivered:       ['awaiting_return', 'completed'],
+  awaiting_return: ['completed'],
+  completed:       [],
+  cancelled:       [],
+};
+
+const allOrders = [
+  { id: 'VG-2026-001', menu: 'Menu Gastronomique',     client: 'Anne-Sophie Martin', email: 'as.martin@email.fr',  tel: '06 12 34 56 78', persons: 8,  date: '14/02/2026', event: '14/02/2026', status: 'completed',  total: 360,  material: false, cancelInfo: null },
+  { id: 'VG-2026-002', menu: 'Menu Noël Prestige',      client: 'Pierre Dupont',      email: 'pierre.d@email.fr',   tel: '06 98 76 54 32', persons: 12, date: '28/01/2026', event: '31/12/2025', status: 'completed',  total: 780,  material: true,  cancelInfo: null },
+  { id: 'VG-2026-003', menu: 'Menu Buffet Festif',      client: 'Camille Renaud',     email: 'c.renaud@email.fr',   tel: '07 11 22 33 44', persons: 25, date: '05/02/2026', event: '22/02/2026', status: 'accepted',   total: 950,  material: false, cancelInfo: null },
+  { id: 'VG-2026-004', menu: 'Menu Cocktail Prestige',  client: 'François Laurent',   email: 'f.laurent@corp.fr',   tel: '06 55 66 77 88', persons: 30, date: '10/02/2026', event: '01/03/2026', status: 'received',   total: 1260, material: true,  cancelInfo: null },
+  { id: 'VG-2026-005', menu: 'Menu Terroir',            client: 'Isabelle Thomas',    email: 'isa.t@email.fr',      tel: '07 33 44 55 66', persons: 6,  date: '15/02/2026', event: '05/03/2026', status: 'preparing',  total: 228,  material: false, cancelInfo: null },
+  { id: 'VG-2026-006', menu: 'Menu Vegan Gourmand',     client: 'Marc Bernard',       email: 'marc.b@email.fr',     tel: '06 77 88 99 00', persons: 10, date: '17/02/2026', event: '08/03/2026', status: 'received',   total: 340,  material: false, cancelInfo: null },
+  { id: 'VG-2026-007', menu: 'Menu Pâques Gourmand',    client: 'Sophie Blanc',       email: 'sophie.b@email.fr',   tel: '06 44 55 66 77', persons: 15, date: '18/02/2026', event: '20/04/2026', status: 'delivering', total: 780,  material: true,  cancelInfo: null },
+];
+
+let pendingReviews = [
+  { id: 'r_p1', name: 'Sophie B.',   date: '18/02/2026', stars: 5, text: 'Prestation absolument parfaite pour notre anniversaire de mariage ! Les plats étaient délicieux et le service impeccable.', status: 'pending' },
+  { id: 'r_p2', name: 'Thomas V.',   date: '17/02/2026', stars: 4, text: 'Très bonne qualité générale. Le menu Terroir était vraiment savoureux. Livraison légèrement en retard mais rien de grave.', status: 'pending' },
+  { id: 'r_p3', name: 'Lucie M.',    date: '16/02/2026', stars: 3, text: 'Correct sans plus. Les quantités étaient insuffisantes pour le nombre de personnes commandées.', status: 'pending' },
+  ...reviews.map((r, i) => ({ id: 'r_pub_' + i, ...r, status: 'approved' })),
+];
+
+let hoursData = [
+  { day: 'Lundi',    open: '09:00', close: '18:00', closed: false },
+  { day: 'Mardi',    open: '09:00', close: '18:00', closed: false },
+  { day: 'Mercredi', open: '09:00', close: '18:00', closed: false },
+  { day: 'Jeudi',    open: '09:00', close: '18:00', closed: false },
+  { day: 'Vendredi', open: '09:00', close: '18:00', closed: false },
+  { day: 'Samedi',   open: '10:00', close: '16:00', closed: false },
+  { day: 'Dimanche', open: '',      close: '',       closed: true  },
+];
+
+// Override handleLogin to detect employee credentials
+function handleLogin() {
+  const email = document.getElementById('login_email').value.trim();
+  const password = document.getElementById('login_password').value;
+  if (!email || !password) { showToast('Veuillez remplir tous les champs.'); return; }
+  isEmployee = (email === 'employe@vg.fr' || email.toLowerCase().startsWith('employe'));
+  isLoggedIn = true;
+  currentUser = isEmployee
+    ? { prenom: 'Employé', nom: 'VG', email, role: 'employee' }
+    : { prenom: email.split('@')[0], email };
+  closeLogin();
+  updateNavAuth();
+  showToast('Bienvenue ' + currentUser.prenom + ' !');
+  if (pendingAction) { pendingAction(); pendingAction = null; }
+}
+
+// Override updateNavAuth to handle employee button
+function updateNavAuth() {
+  const btnLogin    = document.getElementById('navConnexion');
+  const btnRegister = document.getElementById('navInscrire');
+  const btnUser     = document.getElementById('navUser');
+  const btnEmp      = document.getElementById('navEmployee');
+  if (isLoggedIn && currentUser) {
+    btnLogin.style.display    = 'none';
+    btnRegister.style.display = 'none';
+    if (isEmployee) {
+      btnUser.style.display = 'none';
+      if (btnEmp) btnEmp.style.display = 'flex';
+    } else {
+      btnUser.style.display = 'flex';
+      document.getElementById('navUserName').textContent = currentUser.prenom;
+      if (btnEmp) btnEmp.style.display = 'none';
+    }
+  } else {
+    btnLogin.style.display    = '';
+    btnRegister.style.display = '';
+    btnUser.style.display     = 'none';
+    if (btnEmp) btnEmp.style.display = 'none';
+    isEmployee = false;
+  }
+}
+
+// ─── EMPLOYEE PANEL ───
+function openEmpPanel() {
+  renderEmpOrders();
+  renderEmpMenus();
+  renderEmpReviews('pending');
+  renderEmpHours();
+  updateEmpBadges();
+  document.getElementById('empOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeEmpPanel() {
+  document.getElementById('empOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function closeEmpOutside(e) {
+  if (e.target === document.getElementById('empOverlay')) closeEmpPanel();
+}
+function switchEmpTab(name, btn) {
+  document.querySelectorAll('.emp-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.emp-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('emp-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+function updateEmpBadges() {
+  const pendingCount = pendingReviews.filter(r => r.status === 'pending').length;
+  const rb = document.getElementById('empReviewsBadge');
+  if (rb) { rb.textContent = pendingCount; rb.style.display = pendingCount > 0 ? 'inline-flex' : 'none'; }
+  const newOrders = allOrders.filter(o => o.status === 'received').length;
+  const ob = document.getElementById('empOrdersBadge');
+  if (ob) { ob.textContent = newOrders; ob.style.display = newOrders > 0 ? 'inline-flex' : 'none'; }
+}
+
+// ─── EMP: ORDERS ───
+function renderEmpOrders() {
+  const statusF = document.getElementById('empFilterStatus').value;
+  const clientF = document.getElementById('empFilterClient').value.toLowerCase();
+  const menuF   = document.getElementById('empFilterMenu').value.toLowerCase();
+  const filtered = allOrders.filter(o => {
+    if (statusF && o.status !== statusF) return false;
+    if (clientF && !o.client.toLowerCase().includes(clientF) && !o.email.toLowerCase().includes(clientF)) return false;
+    if (menuF   && !o.menu.toLowerCase().includes(menuF)) return false;
+    return true;
+  });
+  const list = document.getElementById('empOrdersList');
+  if (!filtered.length) {
+    list.innerHTML = '<div class="dash-empty"><div class="icon">📋</div><p>Aucune commande ne correspond aux critères.</p></div>';
+    return;
+  }
+  list.innerHTML = filtered.map(o => {
+    const s = empStatusMap[o.status] || empStatusMap.received;
+    const avail = (nextStatuses[o.status] || []);
+    const canCancel = !['completed','cancelled'].includes(o.status);
+    const statusOpts = avail.map(st => `<option value="${st}">${empStatusMap[st]?.label || st}</option>`).join('');
+    const cancelInfoHtml = o.cancelInfo ? `
+      <div style="background:rgba(229,57,53,0.05);border-left:3px solid #e53935;padding:.6rem 1rem;border-radius:0 4px 4px 0;margin-top:.6rem;font-size:.78rem;color:#b71c1c;line-height:1.5">
+        <strong>Annulée</strong> · Contact : ${o.cancelInfo.method === 'gsm' ? '📞 Appel GSM' : '✉️ Email'} le ${o.cancelInfo.date}<br>Motif : ${o.cancelInfo.reason}
+      </div>` : '';
+    const actionsHtml = !['completed','cancelled'].includes(o.status) ? `
+      <div class="emp-order-actions">
+        ${statusOpts ? `<select class="emp-status-select" id="empSel_${o.id}"><option value="">— Changer le statut —</option>${statusOpts}</select><button class="btn-emp-update" onclick="applyOrderStatus('${o.id}')">Valider</button>` : ''}
+        ${canCancel ? `<button class="btn-emp-cancel" onclick="openCancelModal('${o.id}')">Annuler la commande</button>` : ''}
+      </div>` : '';
+    return `
+      <div class="emp-order-card">
+        <div class="emp-order-top">
+          <div>
+            <div class="emp-order-ref">Réf. ${o.id}</div>
+            <div class="emp-order-name">${o.menu}</div>
+            <div class="emp-order-client">👤 ${o.client} · <a href="mailto:${o.email}" style="color:var(--burgundy);text-decoration:none">${o.email}</a> · ${o.tel}</div>
+          </div>
+          <span class="order-status ${s.cls}">${s.label}</span>
+        </div>
+        <div class="emp-order-meta">
+          <span>👥 ${o.persons} personnes</span>
+          <span>📅 Événement : ${o.event}</span>
+          <span>🗓 Commandé le ${o.date}</span>
+          <span style="font-family:'Playfair Display',serif;font-weight:700;color:var(--burgundy)">${o.total.toFixed(2).replace('.',',')} €</span>
+          ${o.material ? '<span style="background:rgba(196,154,60,0.12);color:#7a5c00;padding:.1rem .5rem;border-radius:100px;font-size:.72rem">🧺 Matériel prêté</span>' : ''}
+        </div>
+        ${cancelInfoHtml}
+        ${actionsHtml}
+      </div>`;
+  }).join('');
+}
+
+function applyOrderStatus(orderId) {
+  const sel = document.getElementById('empSel_' + orderId);
+  if (!sel || !sel.value) { showToast('Veuillez sélectionner un statut.'); return; }
+  const order = allOrders.find(o => o.id === orderId);
+  if (!order) return;
+  order.status = sel.value;
+  if (order.status === 'delivered' && !order.material) order.status = 'completed';
+  if (order.status === 'awaiting_return') {
+    showToast('📧 Notification envoyée à ' + order.client + ' : restitution du matériel sous 10 jours ouvrés (600 € sinon).');
+  }
+  renderEmpOrders();
+  updateEmpBadges();
+  showToast('Commande ' + orderId + ' → "' + empStatusMap[order.status]?.label + '"');
+}
+
+function openCancelModal(orderId) {
+  _cancelOrderId = orderId;
+  const o = allOrders.find(x => x.id === orderId);
+  document.getElementById('cancelOrderRef').textContent = 'Réf. ' + orderId + (o ? ' — ' + o.menu : '');
+  document.getElementById('cancelContactMethod').value = '';
+  document.getElementById('cancelContactDate').value   = '';
+  document.getElementById('cancelReason').value        = '';
+  document.getElementById('cancelOrderOverlay').classList.add('open');
+}
+function closeCancelModal() {
+  document.getElementById('cancelOrderOverlay').classList.remove('open');
+}
+function closeCancelModalOutside(e) {
+  if (e.target === document.getElementById('cancelOrderOverlay')) closeCancelModal();
+}
+function submitCancelOrder() {
+  const method = document.getElementById('cancelContactMethod').value;
+  const date   = document.getElementById('cancelContactDate').value;
+  const reason = document.getElementById('cancelReason').value.trim();
+  if (!method) { showToast('Veuillez sélectionner le mode de contact.'); return; }
+  if (!date)   { showToast('Veuillez indiquer la date du contact.'); return; }
+  if (!reason) { showToast('Veuillez indiquer le motif d\'annulation.'); return; }
+  const order = allOrders.find(o => o.id === _cancelOrderId);
+  if (!order) return;
+  order.status     = 'cancelled';
+  order.cancelInfo = { method, date, reason };
+  closeCancelModal();
+  renderEmpOrders();
+  updateEmpBadges();
+  showToast('Commande ' + _cancelOrderId + ' annulée avec motif enregistré.');
+  _cancelOrderId = null;
+}
+
+// ─── EMP: MENUS ───
+function renderEmpMenus() {
+  document.getElementById('empMenusList').innerHTML = menus.map(m => `
+    <div class="emp-menu-card">
+      <div class="emp-menu-thumb"><img src="${m.img}" alt="${m.name}" loading="lazy"></div>
+      <div class="emp-menu-info">
+        <div class="emp-menu-name">${m.name}</div>
+        <div class="emp-menu-meta">
+          <span class="card-badge ${m.type}" style="position:static;display:inline-block;margin-right:.3rem">${m.type === 'vegan' ? 'Vegan' : m.type === 'vegetarien' ? 'Végétarien' : 'Classique'}</span>
+          ${m.price.toFixed(2).replace('.',',')} €/pers. · min. ${m.minPersons} pers.
+        </div>
+      </div>
+      <div class="emp-menu-actions">
+        <button class="btn-icon" onclick="openMenuForm(${m.id})">✏️ Modifier</button>
+        <button class="btn-icon danger" onclick="deleteMenuEmp(${m.id})">🗑 Supprimer</button>
+      </div>
+    </div>`).join('');
+}
+
+function openMenuForm(id) {
+  _editingMenuId = id;
+  if (id === null) {
+    document.getElementById('menuFormTitle').textContent = 'Nouveau menu';
+    ['mf_name','mf_theme','mf_price','mf_minPersons','mf_desc','mf_fullDesc','mf_composition','mf_allergens','mf_img'].forEach(f => document.getElementById(f).value = '');
+    document.getElementById('mf_type').value = 'classique';
+  } else {
+    const m = menus.find(x => x.id === id);
+    if (!m) return;
+    document.getElementById('menuFormTitle').textContent = 'Modifier — ' + m.name;
+    document.getElementById('mf_name').value        = m.name;
+    document.getElementById('mf_type').value        = m.type;
+    document.getElementById('mf_theme').value       = m.theme || '';
+    document.getElementById('mf_price').value       = m.price;
+    document.getElementById('mf_minPersons').value  = m.minPersons;
+    document.getElementById('mf_desc').value        = m.desc;
+    document.getElementById('mf_fullDesc').value    = m.fullDesc || '';
+    document.getElementById('mf_composition').value = (m.composition || []).join('\n');
+    document.getElementById('mf_allergens').value   = m.allergens || '';
+    document.getElementById('mf_img').value         = m.img || '';
+  }
+  document.getElementById('menuFormOverlay').classList.add('open');
+}
+function closeMenuForm() {
+  document.getElementById('menuFormOverlay').classList.remove('open');
+}
+function saveMenuForm() {
+  const name       = document.getElementById('mf_name').value.trim();
+  const type       = document.getElementById('mf_type').value;
+  const theme      = document.getElementById('mf_theme').value.trim();
+  const price      = parseFloat(document.getElementById('mf_price').value);
+  const minPersons = parseInt(document.getElementById('mf_minPersons').value);
+  const desc       = document.getElementById('mf_desc').value.trim();
+  const fullDesc   = document.getElementById('mf_fullDesc').value.trim();
+  const compRaw    = document.getElementById('mf_composition').value.trim();
+  const allergens  = document.getElementById('mf_allergens').value.trim();
+  const img        = document.getElementById('mf_img').value.trim();
+  if (!name || !price || !minPersons || !desc) { showToast('Veuillez remplir les champs obligatoires.'); return; }
+  const composition = compRaw ? compRaw.split('\n').map(s => s.trim()).filter(Boolean) : [];
+  const fallbackImg = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=700&q=80';
+  if (_editingMenuId === null) {
+    menus.push({ id: Math.max(...menus.map(m => m.id)) + 1, name, type, theme, desc, fullDesc, price, minPersons, img: img || fallbackImg, composition, allergens });
+    showToast('Menu "' + name + '" ajouté !');
+  } else {
+    const idx = menus.findIndex(m => m.id === _editingMenuId);
+    if (idx !== -1) Object.assign(menus[idx], { name, type, theme, desc, fullDesc, price, minPersons, img: img || menus[idx].img, composition, allergens });
+    showToast('Menu "' + name + '" mis à jour !');
+  }
+  closeMenuForm();
+  renderEmpMenus();
+  renderMenus(menus);
+}
+function deleteMenuEmp(id) {
+  const m = menus.find(x => x.id === id);
+  if (!m) return;
+  if (!confirm('Supprimer "' + m.name + '" ? Cette action est irréversible.')) return;
+  menus.splice(menus.findIndex(x => x.id === id), 1);
+  renderEmpMenus();
+  renderMenus(menus);
+  showToast('Menu supprimé.');
+}
+
+// ─── EMP: REVIEWS ───
+let _reviewFilter = 'pending';
+function renderEmpReviews(filter) {
+  _reviewFilter = filter || _reviewFilter;
+  const filtered = pendingReviews.filter(r => r.status === _reviewFilter);
+  const list = document.getElementById('empReviewsList');
+  if (!filtered.length) {
+    const msgs = { pending: 'Aucun avis en attente de modération.', approved: 'Aucun avis approuvé.', rejected: 'Aucun avis refusé.' };
+    list.innerHTML = `<div class="dash-empty"><div class="icon">⭐</div><p>${msgs[_reviewFilter] || 'Aucun avis.'}</p></div>`;
+    updateEmpBadges(); return;
+  }
+  list.innerHTML = filtered.map(r => {
+    const statusCls = r.status === 'approved' ? 'status-accepted' : r.status === 'rejected' ? 'status-cancelled' : 'status-pending';
+    const statusLbl = r.status === 'approved' ? 'Approuvé' : r.status === 'rejected' ? 'Refusé' : 'En attente';
+    return `
+      <div class="emp-review-card">
+        <div class="emp-review-header">
+          <div>
+            <div class="emp-review-author">${r.name} <span style="color:var(--gold)">${'★'.repeat(r.stars)}${'☆'.repeat(5-r.stars)}</span></div>
+            <div class="emp-review-date">${r.date}</div>
+          </div>
+          <span class="order-status ${statusCls}" style="font-size:.65rem">${statusLbl}</span>
+        </div>
+        <p class="emp-review-text">"${r.text}"</p>
+        <div class="emp-review-actions">
+          ${r.status !== 'approved' ? `<button class="btn-approve" onclick="approveReview('${r.id}')">✓ Approuver</button>` : ''}
+          ${r.status !== 'rejected' ? `<button class="btn-reject"  onclick="rejectReview('${r.id}')">✕ Refuser</button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+  updateEmpBadges();
+}
+function approveReview(id) {
+  const r = pendingReviews.find(x => x.id === id);
+  if (!r) return;
+  r.status = 'approved';
+  if (!reviews.some(rv => rv.name === r.name && rv.text === r.text)) {
+    reviews.push({ name: r.name, date: r.date, stars: r.stars, text: r.text });
+    renderReviews();
+  }
+  renderEmpReviews();
+  showToast('Avis de ' + r.name + ' approuvé et publié.');
+}
+function rejectReview(id) {
+  const r = pendingReviews.find(x => x.id === id);
+  if (!r) return;
+  r.status = 'rejected';
+  const idx = reviews.findIndex(rv => rv.name === r.name && rv.text === r.text);
+  if (idx !== -1) { reviews.splice(idx, 1); renderReviews(); }
+  renderEmpReviews();
+  showToast('Avis de ' + r.name + ' refusé.');
+}
+
+// ─── EMP: HOURS ───
+function renderEmpHours() {
+  document.getElementById('empHoursList').innerHTML = hoursData.map((h, i) => `
+    <div class="hours-row">
+      <div class="hours-day">${h.day}</div>
+      <div class="hours-inputs">
+        <input type="time" id="h_open_${i}"  value="${h.open}"  ${h.closed ? 'disabled' : ''} style="${h.closed ? 'opacity:.4' : ''}">
+        <span>–</span>
+        <input type="time" id="h_close_${i}" value="${h.close}" ${h.closed ? 'disabled' : ''} style="${h.closed ? 'opacity:.4' : ''}">
+      </div>
+      <label class="hours-closed-toggle">
+        <input type="checkbox" id="h_closed_${i}" ${h.closed ? 'checked' : ''} onchange="toggleDayClosed(${i})"> Fermé
+      </label>
+    </div>`).join('');
+}
+function toggleDayClosed(i) {
+  const closed = document.getElementById('h_closed_' + i).checked;
+  hoursData[i].closed = closed;
+  const op = document.getElementById('h_open_' + i);
+  const cl = document.getElementById('h_close_' + i);
+  op.disabled = cl.disabled = closed;
+  op.style.opacity = cl.style.opacity = closed ? '.4' : '1';
+}
+function saveHours() {
+  hoursData.forEach((h, i) => {
+    h.open   = document.getElementById('h_open_'   + i).value;
+    h.close  = document.getElementById('h_close_'  + i).value;
+    h.closed = document.getElementById('h_closed_' + i).checked;
+  });
+  showToast('Horaires mis à jour avec succès !');
+}
 
 // ─── INIT ───
 renderMenus(menus);
